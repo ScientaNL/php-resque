@@ -24,29 +24,29 @@ class Resque_Log extends Psr\Log\AbstractLogger
 	 */
 	public function log($level, $message, array $context = array())
 	{
-		$numeric = LOG_EMERG;
+		$numeric = \LOG_EMERG;
 
 		switch($level) {
 		case 'debug':
-			$numeric = LOG_DEBUG;
+			$numeric = \LOG_DEBUG;
 			break;
 		case 'info':
-			$numeric = LOG_INFO;
+			$numeric = \LOG_INFO;
 			break;
 		case 'notice':
-			$numeric = LOG_NOTICE;
+			$numeric = \LOG_NOTICE;
 			break;
 		case 'warning':
-			$numeric = LOG_WARNING;
+			$numeric = \LOG_WARNING;
 			break;
 		case 'error':
-			$numeric = LOG_ERR;
+			$numeric = \LOG_ERR;
 			break;
 		case 'critical':
-			$numeric = LOG_CRIT;
+			$numeric = \LOG_CRIT;
 			break;
 		case 'alert':
-			$numeric = LOG_ALERT;
+			$numeric = \LOG_ALERT;
 			break;
 		case 'emergency':
 		default:
