@@ -24,19 +24,43 @@ class Resque_Log extends Psr\Log\AbstractLogger
 	 */
 	public function log($level, $message, array $context = array())
 	{
+		$numeric = LOG_EMERG;
+
+		switch($level) {
+		case 'debug':
+			$numeric = LOG_DEBUG;
+			break;
+		case 'info':
+			$numeric = LOG_INFO;
+			break;
+		case 'notice':
+			$numeric = LOG_NOTICE;
+			break;
+		case 'warning':
+			$numeric = LOG_WARNING;
+			break;
+		case 'error':
+			$numeric = LOG_ERR;
+			break;
+		case 'critical':
+			$numeric = LOG_CRIT;
+			break;
+		case 'alert':
+			$numeric = LOG_ALERT;
+			break;
+		case 'emergency':
+		default:
+			break;
+		}
+
 		if ($this->verbose) {
-			fwrite(
-				STDOUT,
-				'[' . $level . '] [' . strftime('%T %Y-%m-%d') . '] ' . $this->interpolate($message, $context) . PHP_EOL
-			);
+			syslog($numeric, '[' . $level . '] ' . $this->interpolate($message, $context) . PHP_EOL );
 			return;
 		}
 
 		if (!($level === Psr\Log\LogLevel::INFO || $level === Psr\Log\LogLevel::DEBUG)) {
-			fwrite(
-				STDOUT,
-				'[' . $level . '] ' . $this->interpolate($message, $context) . PHP_EOL
-			);
+			syslog($numeric, '[' . $level . '] ' . $this->interpolate($message, $context) . PHP_EOL );
+			return;
 		}
 	}
 
