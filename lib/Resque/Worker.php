@@ -160,6 +160,8 @@ class Resque_Worker
 				break;
 			}
 
+			$this->registerSigHandlers();
+
 			// Attempt to find and reserve a job
 			$job = false;
 			if(!$this->paused) {
