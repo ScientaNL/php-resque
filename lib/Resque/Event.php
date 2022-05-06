@@ -34,7 +34,7 @@ class Resque_Event
 			if (!is_callable($callback)) {
 				continue;
 			}
-			call_user_func_array($callback, $data);
+			call_user_func_array($callback, array_values($data));
 		}
 		
 		return true;
