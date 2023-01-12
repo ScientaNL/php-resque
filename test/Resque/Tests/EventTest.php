@@ -8,7 +8,9 @@
  */
 class Resque_Tests_EventTest extends Resque_Tests_TestCase
 {
-	private $callbacksHit = array();
+	public $worker;
+
+ 	private $callbacksHit = array();
 
 	public function setUp()
 	{
