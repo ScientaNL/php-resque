@@ -124,11 +124,18 @@ class Resque_Redis
 			// Look for known Credis_Client options
 			$timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
 			$persistent = isset($options['persistent']) ? $options['persistent'] : '';
+			$tlsOptions = isset($options['tls']) ? $options['tls'] : null;
 
-			$this->driver = new Credis_Client($host, $port, $timeout, $persistent);
-			if ($password){
-				$this->driver->auth($password);
-			}
+			$this->driver = new Credis_Client(
+				$host,
+				$port,
+				$timeout,
+				$persistent,
+				0,
+				$password,
+				$user,
+				$tlsOptions
+			);
 
 			// If we have found a database in our DSN, use it instead of the `$database`
 			// value passed into the constructor.
@@ -148,6 +155,7 @@ class Resque_Redis
 	 * - host:port
 	 * - redis://user:pass@host:port/db?option1=val1&option2=val2
 	 * - tcp://user:pass@host:port/db?option1=val1&option2=val2
+	 * - tls://user:pass@host:port/db?option1=val1&option2=val2
 	 *
 	 * Note: the 'user' part of the DSN is not used.
 	 *
@@ -164,7 +172,7 @@ class Resque_Redis
 		$parts = parse_url($dsn);
 
 		// Check the URI scheme
-		$validSchemes = array('redis', 'tcp');
+		$validSchemes = array('redis', 'tcp', 'tls');
 		if (isset($parts['scheme']) && ! in_array($parts['scheme'], $validSchemes)) {
 			throw new \InvalidArgumentException("Invalid DSN. Supported schemes are " . implode(', ', $validSchemes));
 		}
@@ -173,6 +181,11 @@ class Resque_Redis
 		if ( ! isset($parts['host']) && isset($parts['path'])) {
 			$parts['host'] = $parts['path'];
 			unset($parts['path']);
+		}
+
+		$host = $parts['host'];
+		if ($parts['scheme'] !== 'redis') {
+			$host = "{$parts['scheme']}://$host";
 		}
 
 		// Extract the port number as an integer
@@ -197,7 +210,7 @@ class Resque_Redis
 		}
 
 		return array(
-			$parts['host'],
+			$host,
 			$port,
 			$database,
 			$user,
