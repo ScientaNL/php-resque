@@ -8,6 +8,9 @@
  */
 class Resque_Redis
 {
+	/**
+	 * @var Credis_Client|RedisCluster
+	 */
 	public $driver;
 
 	/**
@@ -113,30 +116,46 @@ class Resque_Redis
 	 */
     public function __construct($server, $database = null)
 	{
+		$clusterMode = false;
 		if (is_array($server)) {
-			$this->driver = new Credis_Cluster($server);
+			$server = $server[0];
+			$clusterMode = true;
 		}
-		else {
 
-			list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($server);
-			// $user is not used, only $password
+		list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($server);
+		// $user is not used, only $password
 
-			// Look for known Credis_Client options
-			$timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
-			$persistent = isset($options['persistent']) ? $options['persistent'] : '';
-			$tlsOptions = isset($options['tls']) ? $options['tls'] : null;
+		// Look for known Credis_Client options
+		$timeout = isset($options['timeout']) ? (int)$options['timeout'] : null;
+		$persistent = isset($options['persistent']) ? filter_var($options['persistent'], \FILTER_VALIDATE_BOOLEAN) : false;
+		$tlsOptions = isset($options['tls']) ? $options['tls'] : null;
 
+		if ($clusterMode) {
+			$this->driver = new RedisCluster(
+				null,
+				array("$host:$port"),
+				$timeout,
+				$timeout,
+				$persistent, //possible because the php-c-extension shares connections between fpm-threads
+				array(
+					'user' => $user,
+					'pass' => $password,
+				),
+				$tlsOptions
+			);
+			//No db allowed for RedisCluster
+			$database = null;
+		} else {
 			$this->driver = new Credis_Client(
 				$host,
 				$port,
 				$timeout,
-				$persistent,
+				$persistent ? '1' : '',
 				0,
 				$password,
 				$user,
 				$tlsOptions
 			);
-
 			// If we have found a database in our DSN, use it instead of the `$database`
 			// value passed into the constructor.
 			if ($dsnDatabase !== false) {
@@ -240,9 +259,8 @@ class Resque_Redis
 			}
 		}
 		try {
-			return $this->driver->__call($name, $args);
-		}
-		catch (CredisException $e) {
+			return call_user_func_array([$this->driver, $name], $args);
+		} catch (CredisException | RedisClusterException | RedisException $e) {
 			return false;
 		}
 	}
