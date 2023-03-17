@@ -135,7 +135,7 @@ class Resque_Redis
 				null,
 				array("$host:$port"),
 				$timeout,
-				$timeout,
+				0,
 				$persistent, //possible because the php-c-extension shares connections between fpm-threads
 				array(
 					'user' => $user,
