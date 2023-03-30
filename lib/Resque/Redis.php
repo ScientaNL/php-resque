@@ -131,9 +131,13 @@ class Resque_Redis
 		$tlsOptions = isset($options['tls']) ? $options['tls'] : null;
 
 		if ($clusterMode) {
+			//host can be a comma-separated list
+			$hosts = array_map(function($host) use ($port) {
+				return "$host:$port";
+			}, explode(',', $host));
 			$this->driver = new RedisCluster(
 				null,
-				array("$host:$port"),
+				$hosts,
 				$timeout,
 				0,
 				$persistent, //possible because the php-c-extension shares connections between fpm-threads
@@ -172,6 +176,7 @@ class Resque_Redis
 	 * Parse a DSN string, which can have one of the following formats:
 	 *
 	 * - host:port
+	 * - redis://user:pass@host1,host2,hostN:port/db?option1=val1&option2=val2
 	 * - redis://user:pass@host:port/db?option1=val1&option2=val2
 	 * - tcp://user:pass@host:port/db?option1=val1&option2=val2
 	 * - tls://user:pass@host:port/db?option1=val1&option2=val2
