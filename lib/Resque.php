@@ -29,6 +29,11 @@ class Resque
 	protected static $redisDatabase = 0;
 
 	/**
+	 * @var null|Psr\Log\LoggerInterface Psr logger.
+	 */
+	protected static $redisLogger = null;
+
+	/**
 	 * Given a host/port combination separated by a colon, set it as
 	 * the redis server that Resque will talk to.
 	 *
@@ -43,6 +48,15 @@ class Resque
 		self::$redisServer   = $server;
 		self::$redisDatabase = $database;
 		self::$redis         = null;
+	}
+
+    /**
+     * @param Psr\Log\LoggerInterface $logger
+     * @return void
+     */
+	public static function setLogger($logger)
+	{
+		self::$redisLogger = $logger;
 	}
 
 	/**
@@ -61,6 +75,10 @@ class Resque
 		} else {
 			self::$redis = new Resque_Redis(self::$redisServer, self::$redisDatabase);
 		}
+
+        if (self::$redisLogger) {
+            self::$redis->setLogger(self::$redisLogger);
+        }
 
 		return self::$redis;
 	}

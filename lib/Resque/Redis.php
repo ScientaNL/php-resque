@@ -14,6 +14,11 @@ class Resque_Redis
 	public $driver;
 
 	/**
+	 * @var Psr\Log\LoggerInterface
+	 */
+	public $logger;
+
+	/**
 	 * Redis namespace
 	 * @var string
 	 */
@@ -114,8 +119,12 @@ class Resque_Redis
 	 * @param int $database A database number to select. However, if we find a valid database number in the DSN the
 	 *                      DSN-supplied value will be used instead and this parameter is ignored.
 	 */
-    public function __construct($server, $database = null)
+    public function __construct($server, $database = null, $logger = null)
 	{
+        if (!$logger) {
+            $this->logger = new Resque_Log();
+        }
+
 		$clusterMode = false;
 		if (is_array($server)) {
 			$server = $server[0];
@@ -266,6 +275,7 @@ class Resque_Redis
 		try {
 			return call_user_func_array([$this->driver, $name], $args);
 		} catch (CredisException | RedisClusterException | RedisException $e) {
+            $this->logger->error($this->formatErrorAsString($e));
 			return false;
 		}
 	}
@@ -284,4 +294,29 @@ class Resque_Redis
 	    }
 	    return $string;
 	}
+
+    /**
+     * Inject the logging object into the worker
+     *
+     * @param Psr\Log\LoggerInterface $logger
+     */
+    public function setLogger(Psr\Log\LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    /**
+     * @param Exception $error
+     * @return string
+     */
+    private function formatErrorAsString(Exception $error)
+    {
+        return sprintf(
+            "Uncaught Exception %s: `%s` at %s:%s",
+            basename(str_replace('\\', '/', get_class($error))),
+            $error->getMessage(),
+            $error->getFile(),
+            $error->getLine()
+		) . PHP_EOL . $error->getTraceAsString();
+    }
 }
