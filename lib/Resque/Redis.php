@@ -280,6 +280,28 @@ class Resque_Redis
 		}
 	}
 
+    /**
+     * @param string $key
+     * @return false|string|null
+     */
+    public function lpop($key)
+    {
+        return $this->driver->lPop(self::$defaultNamespace . $key);
+    }
+
+    /**
+     * @param string[] $keys
+     * @param int $timeout
+     * @return array|null
+     */
+    public function blpop(array $keys, $timeout)
+    {
+        foreach ($keys as $i => $key) {
+            $keys[$i] = self::$defaultNamespace . $key;
+        }
+        return $this->driver->blPop($keys, $timeout);
+    }
+
 	public static function getPrefix()
 	{
 	    return self::$defaultNamespace;
