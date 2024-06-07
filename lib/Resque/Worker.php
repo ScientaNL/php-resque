@@ -20,6 +20,11 @@ class Resque_Worker
 	public $logger;
 
 	/**
+	 * @var bool Whether this worker is running in a forked child process.
+	 */
+	public $hasParent = false;
+
+	/**
 	 * @var array Array of all associated queues for this worker.
 	 */
 	private $queues = array();
@@ -155,6 +160,11 @@ class Resque_Worker
 		$this->updateProcLine('Starting');
 		$this->startup();
 
+
+		if(function_exists('pcntl_signal_dispatch')) {
+			pcntl_signal_dispatch();
+		}
+
 		while(true) {
 			if($this->shutdown) {
 				break;
@@ -222,12 +232,22 @@ class Resque_Worker
 				$this->logger->log(Psr\Log\LogLevel::INFO, $status);
 
 				// Wait until the child process finishes before continuing
-				pcntl_wait($status);
-				$exitStatus = pcntl_wexitstatus($status);
-				if($exitStatus !== 0) {
-					$job->fail(new Resque_Job_DirtyExitException(
-						'Job exited with exit code ' . $exitStatus
-					));
+				while (pcntl_wait($status, WNOHANG) === 0) {
+					if(function_exists('pcntl_signal_dispatch')) {
+						pcntl_signal_dispatch();
+					}
+
+					// Pause for half a second to conserve system resources
+					usleep(500000);
+				}
+
+				if (pcntl_wifexited($status) !== true) {
+					$job->fail(new Resque_Job_DirtyExitException('Job exited abnormally'));
+				} elseif (($exitStatus = pcntl_wexitstatus($status)) !== 0) {
+					$job->fail(new Resque_Job_DirtyExitException('Job exited with exit code ' . $exitStatus));
+				} elseif (in_array($job->getStatus(), array(Resque_Job_Status::STATUS_WAITING, Resque_Job_Status::STATUS_RUNNING))) {
+					$job->updateStatus(Resque_Job_Status::STATUS_COMPLETE);
+					$this->logger->log(Psr\Log\LogLevel::INFO, 'done ' . $job);
 				}
 			}
 
@@ -271,6 +291,11 @@ class Resque_Worker
 	 */
 	public function reserve($blocking = false, $timeout = null)
 	{
+		if ($this->hasParent && !posix_kill(posix_getppid(), 0)) {
+			$this->shutdown();
+			return false;
+		}
+
 		$queues = $this->queues();
 		if(!is_array($queues)) {
 			return;
