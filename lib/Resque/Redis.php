@@ -286,7 +286,12 @@ class Resque_Redis
      */
     public function lpop($key)
     {
-        return $this->driver->lPop(self::$defaultNamespace . $key);
+        try {
+            return $this->driver->lPop(self::$defaultNamespace . $key);
+        } catch (CredisException | RedisClusterException | RedisException $e) {
+            $this->logger->error($this->formatErrorAsString($e));
+            return false;
+        }
     }
 
     /**
@@ -299,7 +304,12 @@ class Resque_Redis
         foreach ($keys as $i => $key) {
             $keys[$i] = self::$defaultNamespace . $key;
         }
-        return $this->driver->blPop($keys, $timeout);
+        try {
+            return $this->driver->blPop($keys, $timeout);
+        } catch (CredisException | RedisClusterException | RedisException $e) {
+            $this->logger->error($this->formatErrorAsString($e));
+            return null;
+        }
     }
 
 	public static function getPrefix()
